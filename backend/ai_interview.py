@@ -107,6 +107,94 @@ class AIInterviewer:
         except Exception as e:
             print(f"⚠️  Reaction generation error: {e}")
             return "That's interesting!"
+    
+    def load_code_submission(self, code_string=None, code_file="code_submission.py"):
+        """Load code submission for review - accepts string or file"""
+        if code_string:
+            return code_string
+        
+        try:
+            with open(code_file, 'r') as f:
+                return f.read()
+        except FileNotFoundError:
+            print(f"⚠️  Code file '{code_file}' not found!")
+            return None
+    
+    def generate_code_feedback(self, code):
+        """Generate detailed feedback on submitted code"""
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": """You are a technical interviewer reviewing code written under time pressure and strict circumstances.
+                    
+                    Focus on:
+                    1. Overall approach and logic
+                    2. Algorithm correctness (does the logic make sense?)
+                    3. Time and space complexity analysis
+                    4. Potential optimizations
+                    5. Problem-solving approach
+                    
+                    Be lenient about:
+                    - Minor syntax errors (they're coding under pressure)
+                    - Missing semicolons, brackets, or small typos
+                    - Variable naming inconsistencies
+                    
+                    Be encouraging and constructive. Focus on the algorithmic thinking rather than perfect syntax.
+                    Keep your feedback conversational and under 200 words."""},
+                    {"role": "user", "content": f"Please review this code written under interview conditions:\n\n{code}"}
+                ],
+                max_tokens=400,
+                temperature=0.7
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"⚠️  Feedback generation error: {e}")
+            return "Unable to generate feedback at this time."
+    
+    def run_code_review(self, code_string=None, code_file="code_submission.py"):
+        """Run the code review phase - accepts code as string or from file"""
+        print("\n" + "=" * 60)
+        print("CODE REVIEW PHASE")
+        print("=" * 60)
+        print("\n🤖 AI: Now let's review your code submission.\n")
+        
+        # Speak transition
+        self.speak("Now let's review your code submission.")
+        time.sleep(1)
+        
+        # Load code (from string or file)
+        code = self.load_code_submission(code_string, code_file)
+        if not code:
+            print("⚠️  No code to review. Skipping code review phase.")
+            return
+        
+        source = "provided string" if code_string else code_file
+        print(f"📄 Code source: {source}\n")
+        print("-" * 60)
+        print(code)
+        print("-" * 60)
+        
+        # Generate feedback
+        print("\n🤖 AI: Analyzing your code...\n")
+        feedback = self.generate_code_feedback(code)
+        
+        # Display feedback
+        print("=" * 60)
+        print("CODE FEEDBACK")
+        print("=" * 60)
+        print(f"\n{feedback}\n")
+        print("=" * 60)
+        
+        # Speak feedback
+        self.speak(feedback)
+        
+        # Save feedback to responses
+        self.code_review = {
+            "code_source": source,
+            "code": code,
+            "feedback": feedback
+        }
         
     def speak(self, text):
         """Use ElevenLabs to speak text with streaming for lower latency"""
@@ -130,7 +218,8 @@ class AIInterviewer:
         output = {
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "total_questions": len(self.responses),
-            "responses": self.responses
+            "responses": self.responses,
+            "code_review": getattr(self, 'code_review', None)
         }
         
         try:
@@ -230,7 +319,7 @@ class AIInterviewer:
         
         return current_answer.strip()
     
-    def run_interview(self):
+    def run_interview(self, code_string=None):
         """Run the interview session"""
         print("=" * 60)
         print("AI VOICE INTERVIEW")
@@ -297,12 +386,21 @@ class AIInterviewer:
                 # Minimal pause before next question (reduced from 1.5s)
                 time.sleep(0.8)
             
+            # Run code review phase (with string or file)
+            self.run_code_review(code_string=code_string)
+            
             # Save and show summary
             self.save_responses()
             self.show_summary()
             
         except KeyboardInterrupt:
             print("\n\n⚠️  Interview stopped")
+            # Still run code review if interrupted after questions
+            if len(self.responses) > 0:
+                try:
+                    self.run_code_review(code_string=code_string)
+                except:
+                    pass
             self.save_responses()
             self.show_summary()
         finally:
@@ -320,11 +418,33 @@ class AIInterviewer:
             print(f"A{qa['question_number']}: {qa['answer']}")
             print(f"AI: {qa['ai_reaction']}")
         
+        if hasattr(self, 'code_review') and self.code_review:
+            print("\n" + "-" * 60)
+            print("CODE REVIEW COMPLETED")
+            print("-" * 60)
+            print(f"Source: {self.code_review['code_source']}")
+            print(f"Feedback: {self.code_review['feedback'][:100]}...")
+        
         print("\n" + "=" * 60)
         print(f"Total questions answered: {len(self.responses)}")
         print("=" * 60)
 
 
 if __name__ == "__main__":
+    # Example usage with code string
+    example_code = """
+def two_sum(nums, target):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] + nums[j] == target:
+                return [i, j]
+    return []
+    """
+    
     interviewer = AIInterviewer(model_path="model", questions_file="interview_questions.json")
+    
+    # Run interview - you can pass code_string to run_interview
+    # interviewer.run_interview(code_string=example_code)
+    
+    # Or use default file-based approach
     interviewer.run_interview()
