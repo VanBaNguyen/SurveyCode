@@ -9,6 +9,12 @@ vosk==0.3.44
 openai>=1.0.0
 elevenlabs==2.30.0
 
+# Web Framework
+flask==3.0.0
+flask-socketio==5.3.5
+flask-cors==4.0.0
+python-socketio==5.10.0
+
 # Utilities
 numpy>=1.24.0
 requests>=2.31.0
