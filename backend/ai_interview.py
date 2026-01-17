@@ -13,6 +13,8 @@ import time
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+from elevenlabs.client import ElevenLabs
+from elevenlabs import stream
 
 load_dotenv()
 
@@ -21,6 +23,10 @@ class AIInterviewer:
     def __init__(self, model_path="model"):
         # Initialize OpenAI
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
+        # Initialize ElevenLabs
+        self.elevenlabs = ElevenLabs(api_key=os.getenv("ELEVENLABS_API"))
+        self.voice_id = "hzLyDn3IrvrdH83BdqUu"
         
         # Initialize Vosk
         print(f"Loading Vosk model from '{model_path}'...")
@@ -39,7 +45,8 @@ class AIInterviewer:
         self.RATE = 16000
         
         # Silence detection settings
-        self.SILENCE_THRESHOLD = 1.5  # seconds of silence to consider answer complete
+        self.SILENCE_THRESHOLD = 2.5  # seconds of silence to consider answer complete
+        self.MIN_ANSWER_LENGTH = 10  # minimum characters for a valid answer
         self.last_speech_time = time.time()
         
         self.pyaudio = pyaudio.PyAudio()
@@ -50,6 +57,18 @@ class AIInterviewer:
         self.conversation_history = []
         self.responses = []
         
+    def speak(self, text):
+        """Use ElevenLabs to speak text"""
+        try:
+            audio = self.elevenlabs.text_to_speech.convert(
+                voice_id=self.voice_id,
+                text=text,
+                model_id="eleven_monolingual_v1"
+            )
+            stream(audio)
+        except Exception as e:
+            print(f"⚠️  TTS Error: {e}")
+    
     def ask_question(self, context=""):
         """Generate next question using OpenAI"""
         print("\n🤖 AI: Thinking...")
@@ -88,11 +107,12 @@ class AIInterviewer:
             frames_per_buffer=self.CHUNK
         )
         
-        print("🎤 Listening... (speak your answer)")
+        print("🎤 Listening... (speak your answer)\n")
         
         current_answer = ""
         self.last_speech_time = time.time()
         is_speaking = False
+        last_partial = ""
         
         try:
             while True:
@@ -101,33 +121,37 @@ class AIInterviewer:
                 if self.recognizer.AcceptWaveform(data):
                     # Final result (end of phrase)
                     result = json.loads(self.recognizer.Result())
-                    text = result.get("text", "")
+                    text = result.get("text", "").strip()
                     
-                    if text:
+                    # Ignore very short words (likely noise)
+                    if text and len(text) > 2:
                         current_answer += " " + text
-                        print(f"You: {text}")
+                        print(f"   {text}")
                         self.last_speech_time = time.time()
                         is_speaking = True
+                        last_partial = ""
                 else:
                     # Partial result
                     partial = json.loads(self.recognizer.PartialResult())
-                    text = partial.get("partial", "")
+                    text = partial.get("partial", "").strip()
                     
-                    if text:
+                    # Only update if partial is meaningful and different
+                    if text and len(text) > 2 and text != last_partial:
                         self.last_speech_time = time.time()
                         is_speaking = True
-                        print(f"\r🎤 {text}", end="", flush=True)
+                        last_partial = text
+                        print(f"\r💬 {text}...", end="", flush=True)
                 
                 # Check for silence (user finished speaking)
                 silence_duration = time.time() - self.last_speech_time
                 
                 if is_speaking and silence_duration > self.SILENCE_THRESHOLD:
-                    if current_answer.strip():
-                        print("\n✓ Answer recorded\n")
+                    if len(current_answer.strip()) >= self.MIN_ANSWER_LENGTH:
+                        print("\n\n✓ Answer recorded")
                         break
                     
         except KeyboardInterrupt:
-            print("\n\nInterview stopped by user")
+            print("\n\n⚠️  Interview stopped by user")
             return None
         finally:
             stream.stop_stream()
@@ -142,8 +166,9 @@ class AIInterviewer:
         print("=" * 60)
         print("\nInstructions:")
         print("- The AI will ask you questions")
-        print("- Speak your answer naturally")
-        print("- The system will detect when you're done (1.5s silence)")
+        print("- Speak your answer clearly")
+        print("- System detects when you're done (2.5s silence)")
+        print("- Minimum 10 characters for valid answer")
         print("- Press Ctrl+C to stop anytime\n")
         print("=" * 60)
         
@@ -153,10 +178,15 @@ class AIInterviewer:
             for i in range(num_questions):
                 # Generate question
                 question = self.ask_question()
-                print(f"\n🤖 AI: {question}\n")
+                print(f"\n{'='*60}")
+                print(f"🤖 Question {i+1}: {question}")
+                print('='*60)
+                
+                # Speak the question
+                self.speak(question)
                 
                 # Wait a moment before listening
-                time.sleep(1)
+                time.sleep(0.5)
                 
                 # Listen for answer
                 answer = self.listen_for_answer()
@@ -164,8 +194,8 @@ class AIInterviewer:
                 if answer is None:  # User interrupted
                     break
                 
-                if not answer:
-                    print("⚠️  No answer detected, moving on...\n")
+                if not answer or len(answer) < self.MIN_ANSWER_LENGTH:
+                    print("⚠️  No clear answer detected, moving on...\n")
                     continue
                 
                 # Store Q&A

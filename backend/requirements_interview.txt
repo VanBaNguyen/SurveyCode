@@ -2,3 +2,4 @@ pyaudio==0.2.14
 vosk==0.3.44
 openai>=1.0.0
 python-dotenv==1.0.0
+elevenlabs==2.30.0
