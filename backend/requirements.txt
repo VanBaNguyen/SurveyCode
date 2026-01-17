@@ -1,4 +1,16 @@
+# Audio Processing
 pyaudio==0.2.14
+
+# Speech Recognition
 faster-whisper==1.0.3
+vosk==0.3.44
+
+# AI/ML
+openai>=1.0.0
+elevenlabs==2.30.0
+
+# Utilities
 numpy>=1.24.0
 requests>=2.31.0
+python-dotenv==1.0.0
+
