@@ -51,6 +51,7 @@ class InterviewSession:
         self.is_speaking = False
         self.silence_threshold = 2.0  # seconds of silence to auto-submit
         self.min_answer_length = 10
+        self.answer_submitted = False  # Prevent duplicate submissions
         
     def load_questions(self):
         try:
@@ -70,6 +71,8 @@ class InterviewSession:
         if self.current_question_index < len(self.questions):
             question = self.questions[self.current_question_index]
             self.current_question_index += 1
+            # Reset submission flag for new question
+            self.answer_submitted = False
             return question
         return None
     
@@ -289,10 +292,13 @@ def handle_audio_chunk(data):
         current_time = time.time()
         silence_duration = current_time - interview.last_speech_time
         
-        if interview.is_speaking and silence_duration > interview.silence_threshold:
+        if interview.is_speaking and not interview.answer_submitted and silence_duration > interview.silence_threshold:
             transcript = interview.current_transcript.strip()
             if len(transcript) >= interview.min_answer_length:
                 print(f"[Auto-submit] Silence detected, submitting: {transcript}")
+                
+                # Mark as submitted to prevent duplicates
+                interview.answer_submitted = True
                 
                 # Get current question info
                 q_num = interview.current_question_index
