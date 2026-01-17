@@ -234,28 +234,44 @@ def handle_audio_chunk(data):
     
     interview = sessions[session_id]
     
-    # Process audio with Vosk
-    if interview.recognizer.AcceptWaveform(audio_data):
-        result = json.loads(interview.recognizer.Result())
-        text = result.get("text", "").strip()
+    try:
+        # Convert bytes to proper format for Vosk
+        if isinstance(audio_data, str):
+            # If it's base64 encoded
+            import base64
+            audio_bytes = base64.b64decode(audio_data)
+        else:
+            # If it's already bytes
+            audio_bytes = bytes(audio_data)
         
-        if text and len(text) > 2:
-            interview.current_transcript += " " + text
-            emit('transcription', {
-                'text': text,
-                'is_final': True,
-                'full_transcript': interview.current_transcript.strip()
-            })
-    else:
-        partial = json.loads(interview.recognizer.PartialResult())
-        text = partial.get("partial", "").strip()
-        
-        if text and len(text) > 2:
-            emit('transcription', {
-                'text': text,
-                'is_final': False,
-                'full_transcript': interview.current_transcript.strip()
-            })
+        # Process audio with Vosk
+        if interview.recognizer.AcceptWaveform(audio_bytes):
+            result = json.loads(interview.recognizer.Result())
+            text = result.get("text", "").strip()
+            
+            print(f"[Vosk Final] {text}")  # Debug log
+            
+            if text and len(text) > 2:
+                interview.current_transcript += " " + text
+                emit('transcription', {
+                    'text': text,
+                    'is_final': True,
+                    'full_transcript': interview.current_transcript.strip()
+                })
+        else:
+            partial = json.loads(interview.recognizer.PartialResult())
+            text = partial.get("partial", "").strip()
+            
+            if text and len(text) > 2:
+                print(f"[Vosk Partial] {text}")  # Debug log
+                emit('transcription', {
+                    'text': text,
+                    'is_final': False,
+                    'full_transcript': interview.current_transcript.strip()
+                })
+    except Exception as e:
+        print(f"Audio processing error: {e}")
+        emit('error', {'message': f'Audio processing error: {str(e)}'})
 
 
 @socketio.on('submit_answer')

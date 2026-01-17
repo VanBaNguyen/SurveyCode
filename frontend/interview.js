@@ -37,14 +37,18 @@ async function playIntroduction() {
 }
 
 socket.on('transcription', (data) => {
+    console.log('Transcription received:', data);
+    
     const transcriptEl = document.getElementById('transcriptText');
     transcriptEl.classList.remove('empty');
     
     if (data.is_final) {
         currentTranscript = data.full_transcript;
         transcriptEl.innerHTML = currentTranscript;
+        console.log('Final transcript:', currentTranscript);
     } else {
         transcriptEl.innerHTML = currentTranscript + ' <span class="partial-text">' + data.text + '</span>';
+        console.log('Partial transcript:', data.text);
     }
 });
 
@@ -173,24 +177,50 @@ async function toggleRecording() {
 
 async function startRecording() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                channelCount: 1,
+                sampleRate: 16000,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            } 
+        });
         
-        mediaRecorder = new MediaRecorder(stream);
+        console.log('Microphone access granted');
         
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    socket.emit('audio_chunk', {
-                        session_id: sessionId,
-                        audio: reader.result
-                    });
-                };
-                reader.readAsArrayBuffer(event.data);
+        // Use AudioContext for proper audio processing
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        const source = audioContext.createMediaStreamSource(stream);
+        const processor = audioContext.createScriptProcessor(4096, 1, 1);
+        
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+        
+        processor.onaudioprocess = (e) => {
+            if (!isRecording) return;
+            
+            const inputData = e.inputBuffer.getChannelData(0);
+            
+            // Convert Float32Array to Int16Array (PCM 16-bit)
+            const pcmData = new Int16Array(inputData.length);
+            for (let i = 0; i < inputData.length; i++) {
+                const s = Math.max(-1, Math.min(1, inputData[i]));
+                pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
             }
+            
+            // Send PCM data to server
+            socket.emit('audio_chunk', {
+                session_id: sessionId,
+                audio: pcmData.buffer
+            });
         };
         
-        mediaRecorder.start(1000);
+        // Store for cleanup
+        window.audioStream = stream;
+        window.audioContext = audioContext;
+        window.audioProcessor = processor;
+        
         isRecording = true;
         
         const recordBtn = document.getElementById('recordBtn');
@@ -199,6 +229,7 @@ async function startRecording() {
         document.getElementById('submitBtn').disabled = false;
         
         updateStatus('Recording... Speak your answer clearly');
+        console.log('Recording started - speak now!');
         
     } catch (error) {
         console.error('Microphone access error:', error);
@@ -207,25 +238,40 @@ async function startRecording() {
 }
 
 function stopRecording() {
-    if (mediaRecorder && isRecording) {
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    if (isRecording) {
         isRecording = false;
+        
+        // Clean up audio resources
+        if (window.audioProcessor) {
+            window.audioProcessor.disconnect();
+            window.audioProcessor = null;
+        }
+        if (window.audioContext) {
+            window.audioContext.close();
+            window.audioContext = null;
+        }
+        if (window.audioStream) {
+            window.audioStream.getTracks().forEach(track => track.stop());
+            window.audioStream = null;
+        }
         
         const recordBtn = document.getElementById('recordBtn');
         recordBtn.textContent = '🎤 Start Recording';
         recordBtn.classList.remove('recording');
         
         updateStatus('Recording stopped. Review your answer and click Submit.');
+        console.log('Recording stopped. Current transcript:', currentTranscript);
     }
 }
 
 async function submitAnswer() {
     if (!currentTranscript || currentTranscript.length < 10) {
+        console.warn('Answer too short:', currentTranscript);
         alert('Please speak your answer first (minimum 10 characters)');
         return;
     }
     
+    console.log('Submitting answer:', currentTranscript);
     stopRecording();
     
     socket.emit('submit_answer', {
