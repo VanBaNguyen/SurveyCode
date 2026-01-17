@@ -342,12 +342,13 @@ function initAssessment({ fresh }) {
 
     updateSaveStatus(`Submitted at ${new Date().toLocaleTimeString()}`);
 
-    // Store the submission for the feedback page and navigate there
+    // Store the submission for the interview page
     try {
       localStorage.setItem("oa_last_submission", JSON.stringify(payload));
     } catch (_) {}
 
-    window.location.href = "feedback.html";
+    // Redirect to interview page instead of feedback
+    window.location.href = "interview.html";
   });
 }
 

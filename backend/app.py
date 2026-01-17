@@ -3,7 +3,7 @@
 Flask WebSocket server for AI Voice Interview
 """
 
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, send_from_directory
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import json
@@ -18,7 +18,7 @@ import io
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../frontend', template_folder='../frontend')
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=10000000)
@@ -155,7 +155,12 @@ def generate_tts(text):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return send_from_directory('../frontend', 'index.html')
+
+
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('../frontend', path)
 
 
 @app.route('/api/start', methods=['POST'])
@@ -344,4 +349,4 @@ def save_session(session_id):
 
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5001, debug=True)

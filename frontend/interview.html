@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice Interview - OA Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        .interview-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .interview-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .interview-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+        
+        .interview-subtitle {
+            font-size: 16px;
+            color: #666;
+        }
+        
+        .status-banner {
+            background: #f0f4ff;
+            border-left: 4px solid #4f46e5;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            font-size: 14px;
+            color: #4f46e5;
+            font-weight: 500;
+        }
+        
+        .question-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .question-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #4f46e5;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+        
+        .question-text {
+            font-size: 20px;
+            color: #1a1a1a;
+            line-height: 1.6;
+            font-weight: 500;
+        }
+        
+        .transcript-card {
+            background: #fafafa;
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 24px;
+            min-height: 120px;
+            margin-bottom: 24px;
+        }
+        
+        .transcript-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+        
+        .transcript-text {
+            font-size: 16px;
+            color: #1a1a1a;
+            line-height: 1.6;
+            min-height: 60px;
+        }
+        
+        .transcript-text.empty {
+            color: #9ca3af;
+            font-style: italic;
+        }
+        
+        .partial-text {
+            color: #9ca3af;
+            font-style: italic;
+        }
+        
+        .reaction-card {
+            background: #ecfdf5;
+            border-left: 4px solid #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            display: none;
+        }
+        
+        .reaction-text {
+            font-size: 16px;
+            color: #065f46;
+            line-height: 1.6;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .btn-interview {
+            flex: 1;
+            padding: 16px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .btn-interview:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-record {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-record:hover:not(:disabled) {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+        
+        .btn-record.recording {
+            background: #ef4444;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .btn-submit-answer {
+            background: #4f46e5;
+            color: white;
+        }
+        
+        .btn-submit-answer:hover:not(:disabled) {
+            background: #4338ca;
+            transform: translateY(-1px);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .progress-bar {
+            background: #e5e7eb;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-mark" aria-hidden="true"></div>
+                <div class="brand-text">
+                    <div class="brand-title">OA Simulator</div>
+                    <div class="brand-subtitle">Voice Interview</div>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="interview-container">
+                <div class="interview-header">
+                    <h1 class="interview-title">🎤 AI Voice Interview</h1>
+                    <p class="interview-subtitle">Answer questions about yourself before receiving feedback</p>
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                </div>
+
+                <div class="status-banner" id="statusBanner">
+                    Initializing interview session...
+                </div>
+
+                <div class="question-card hidden" id="questionCard">
+                    <div class="question-label" id="questionLabel">QUESTION 1</div>
+                    <div class="question-text" id="questionText"></div>
+                </div>
+
+                <div class="reaction-card" id="reactionCard">
+                    <div class="reaction-text" id="reactionText"></div>
+                </div>
+
+                <div class="transcript-card hidden" id="transcriptCard">
+                    <div class="transcript-label">YOUR ANSWER</div>
+                    <div class="transcript-text empty" id="transcriptText">Click "Start Recording" and speak your answer...</div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn-interview btn-record" id="recordBtn" disabled>
+                        🎤 Start Recording
+                    </button>
+                    <button class="btn-interview btn-submit-answer" id="submitBtn" disabled>
+                        Submit Answer
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="./interview.js"></script>
+</body>
+</html>

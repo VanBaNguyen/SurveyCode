@@ -14,6 +14,46 @@ function buildMockFeedback(submission) {
   const code = submission?.code || "";
   const passed = code.includes("return") || code.includes("nums");
 
+  // Check if we have AI feedback from the interview
+  const aiFeedback = submission?.ai_feedback;
+
+  if (aiFeedback) {
+    // Use AI-generated feedback from the voice interview
+    return {
+      verdictLabel: "AI Review Complete",
+      strengths: [
+        "You completed the voice interview successfully.",
+        "Your code was reviewed by our AI interviewer.",
+      ],
+      improvements: [
+        "Review the AI feedback below for specific suggestions.",
+        "Consider the algorithmic approach and complexity analysis.",
+      ],
+      complexity: {
+        time: "See AI feedback",
+        space: "See AI feedback",
+      },
+      testsSummary: "AI feedback provided below includes analysis of your approach.",
+      explanation: aiFeedback,
+      referenceSolution:
+        lang === "python"
+          ? `from typing import List
+
+class Solution:
+    def twoSum(self, nums: List[int], target: int) -> List[int]:
+        index = {}
+        for i, x in enumerate(nums):
+            need = target - x
+            if need in index:
+                return [index[need], i]
+            index[x] = i
+        return []
+`
+          : `// Reference solution available in Python; other languages are analogous.`,
+    };
+  }
+
+  // Fallback to mock feedback if no AI feedback
   return {
     verdictLabel: passed ? "Looks correct" : "Needs work",
     strengths: [
