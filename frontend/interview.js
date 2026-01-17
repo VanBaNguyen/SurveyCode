@@ -174,7 +174,7 @@ async function getNextQuestion() {
         document.getElementById('questionText').textContent = data.question;
         document.getElementById('questionCard').classList.remove('hidden');
         document.getElementById('transcriptCard').classList.remove('hidden');
-        document.getElementById('transcriptText').textContent = 'Click "Start Recording" to begin...';
+        document.getElementById('transcriptText').textContent = 'Click "Answer" to begin...';
         document.getElementById('transcriptText').classList.add('empty');
         
         const recordBtn = document.getElementById('recordBtn');
@@ -197,11 +197,11 @@ async function getNextQuestion() {
         }
         
         // Enable recording button after question finishes
-        updateStatus('Click "Start Recording" to answer');
-        document.getElementById('transcriptText').textContent = 'Click "Start Recording" to begin...';
+        updateStatus('Click "Answer" to respond');
+        document.getElementById('transcriptText').textContent = 'Click "Answer" to begin...';
         if (recordBtn) {
             recordBtn.disabled = false;
-            recordBtn.textContent = '🎤 Start Recording';
+            recordBtn.textContent = 'Answer';
         }
     } catch (error) {
         console.error('Failed to get question:', error);
@@ -309,7 +309,7 @@ async function startRecording() {
         isRecording = true;
         
         const recordBtn = document.getElementById('recordBtn');
-        recordBtn.textContent = '🎤 Recording...';
+        recordBtn.textContent = 'Recording...';
         recordBtn.classList.add('recording');
         
         updateStatus('Recording... Speak your answer clearly');
@@ -341,7 +341,7 @@ function stopRecording() {
         }
         
         const recordBtn = document.getElementById('recordBtn');
-        recordBtn.textContent = '🎤 Start Recording';
+        recordBtn.textContent = 'Answer';
         recordBtn.classList.remove('recording');
         recordBtn.disabled = true;
         
