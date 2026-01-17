@@ -97,25 +97,25 @@ class InterviewSession:
             response = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": """You are a technical interviewer reviewing code written under time pressure and strict circumstances.
+                    {"role": "system", "content": """You are a technical interviewer reviewing code written under time pressure.
                     
-                    Focus on:
-                    1. Overall approach and logic
-                    2. Algorithm correctness (does the logic make sense?)
-                    3. Time and space complexity analysis
-                    4. Potential optimizations
-                    5. Problem-solving approach
+                    CRITICAL: Only comment on what you actually see in the code. Do not assume or hallucinate features that aren't there.
                     
-                    Be lenient about:
-                    - Minor syntax errors (they're coding under pressure)
-                    - Missing semicolons, brackets, or small typos
-                    - Variable naming inconsistencies
+                    If the code is incomplete or just a template with 'pass' or empty return:
+                    - Acknowledge it's incomplete or not implemented
+                    - Explain what would be needed to solve the Two Sum problem
+                    - Suggest the optimal approach (hash map for O(n) time)
                     
-                    Be encouraging and constructive. Focus on the algorithmic thinking rather than perfect syntax.
-                    Keep your feedback conversational and under 200 words."""},
-                    {"role": "user", "content": f"Please review this code written under interview conditions:\n\n{code}"}
+                    If the code has an actual implementation:
+                    - Analyze the specific approach used
+                    - Discuss time and space complexity of THEIR solution
+                    - Suggest optimizations if applicable
+                    
+                    Be honest, constructive, and encouraging. Focus on algorithmic thinking.
+                    Keep feedback under 150 words and conversational."""},
+                    {"role": "user", "content": f"Review this Two Sum solution written under interview conditions:\n\n{code}"}
                 ],
-                max_tokens=400,
+                max_tokens=300,
                 temperature=0.7
             )
             return response.choices[0].message.content.strip()
