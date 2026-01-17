@@ -47,6 +47,10 @@ class InterviewSession:
         self.recognizer.SetWords(True)
         self.current_transcript = ""
         self.code_review = None
+        self.last_speech_time = time.time()
+        self.is_speaking = False
+        self.silence_threshold = 2.0  # seconds of silence to auto-submit
+        self.min_answer_length = 10
         
     def load_questions(self):
         try:
@@ -166,32 +170,46 @@ def serve_static(path):
 @app.route('/api/start', methods=['POST'])
 def start_interview():
     """Initialize a new interview session"""
-    session_id = str(time.time())
-    sessions[session_id] = InterviewSession(session_id)
-    return jsonify({"session_id": session_id, "status": "ready"})
+    try:
+        session_id = str(time.time())
+        sessions[session_id] = InterviewSession(session_id)
+        print(f"Started new interview session: {session_id}")
+        return jsonify({"session_id": session_id, "status": "ready"})
+    except Exception as e:
+        print(f"Error starting interview: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/question/<session_id>', methods=['GET'])
 def get_question(session_id):
     """Get the next question"""
-    if session_id not in sessions:
-        return jsonify({"error": "Invalid session"}), 400
-    
-    interview = sessions[session_id]
-    question = interview.get_next_question()
-    
-    if question is None:
-        return jsonify({"question": None, "completed": True})
-    
-    # Generate TTS for question
-    audio_bytes = generate_tts(question)
-    
-    return jsonify({
-        "question": question,
-        "question_number": interview.current_question_index,
-        "has_audio": audio_bytes is not None,
-        "completed": False
-    })
+    try:
+        if session_id not in sessions:
+            print(f"Error: Invalid session {session_id}")
+            return jsonify({"error": "Invalid session"}), 400
+        
+        interview = sessions[session_id]
+        question = interview.get_next_question()
+        
+        if question is None:
+            print("All questions completed")
+            return jsonify({"question": None, "completed": True})
+        
+        print(f"Sending question {interview.current_question_index}: {question}")
+        
+        return jsonify({
+            "question": question,
+            "question_number": interview.current_question_index,
+            "has_audio": True,  # TTS will be generated on frontend
+            "completed": False
+        })
+    except Exception as e:
+        print(f"Error in get_question: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/tts', methods=['POST'])
@@ -235,48 +253,81 @@ def handle_audio_chunk(data):
     interview = sessions[session_id]
     
     try:
-        # Convert bytes to proper format for Vosk
-        if isinstance(audio_data, str):
-            # If it's base64 encoded
+        # Convert array to bytes
+        if isinstance(audio_data, list):
+            # Convert list of integers to bytes
+            import struct
+            audio_bytes = struct.pack(f'{len(audio_data)}h', *audio_data)
+        elif isinstance(audio_data, str):
             import base64
             audio_bytes = base64.b64decode(audio_data)
         else:
-            # If it's already bytes
             audio_bytes = bytes(audio_data)
+        
+        # Validate audio data
+        if len(audio_bytes) < 100:
+            return  # Skip too-short chunks
         
         # Process audio with Vosk
         if interview.recognizer.AcceptWaveform(audio_bytes):
             result = json.loads(interview.recognizer.Result())
             text = result.get("text", "").strip()
             
-            print(f"[Vosk Final] {text}")  # Debug log
-            
             if text and len(text) > 2:
+                print(f"[Vosk Final] {text}")
                 interview.current_transcript += " " + text
+                interview.last_speech_time = time.time()
+                interview.is_speaking = True
+                
                 emit('transcription', {
                     'text': text,
                     'is_final': True,
                     'full_transcript': interview.current_transcript.strip()
                 })
-        else:
-            partial = json.loads(interview.recognizer.PartialResult())
-            text = partial.get("partial", "").strip()
-            
-            if text and len(text) > 2:
-                print(f"[Vosk Partial] {text}")  # Debug log
-                emit('transcription', {
-                    'text': text,
-                    'is_final': False,
-                    'full_transcript': interview.current_transcript.strip()
+        
+        # Check for silence (auto-submit)
+        current_time = time.time()
+        silence_duration = current_time - interview.last_speech_time
+        
+        if interview.is_speaking and silence_duration > interview.silence_threshold:
+            transcript = interview.current_transcript.strip()
+            if len(transcript) >= interview.min_answer_length:
+                print(f"[Auto-submit] Silence detected, submitting: {transcript}")
+                
+                # Get current question info
+                q_num = interview.current_question_index
+                question = interview.questions[q_num - 1] if q_num > 0 else ""
+                
+                # Generate reaction
+                reaction = interview.generate_reaction(transcript)
+                
+                # Store response
+                interview.responses.append({
+                    "question_number": q_num,
+                    "question": question,
+                    "answer": transcript,
+                    "ai_reaction": reaction
                 })
+                
+                # Reset for next question
+                interview.current_transcript = ""
+                interview.is_speaking = False
+                
+                # Notify client
+                emit('auto_submit', {'answer': transcript})
+                emit('reaction', {
+                    'reaction': reaction,
+                    'has_audio': True
+                })
+                
     except Exception as e:
         print(f"Audio processing error: {e}")
-        emit('error', {'message': f'Audio processing error: {str(e)}'})
+        # Don't emit error for every chunk, just log it
 
 
 @socketio.on('submit_answer')
 def handle_submit_answer(data):
-    """Submit answer and get AI reaction"""
+    """Submit answer and get AI reaction (deprecated - now using auto-submit)"""
     session_id = data.get('session_id')
     answer = data.get('answer', '').strip()
     question_number = data.get('question_number')
@@ -288,7 +339,7 @@ def handle_submit_answer(data):
     
     interview = sessions[session_id]
     
-    if not answer or len(answer) < 10:
+    if not answer or len(answer) < interview.min_answer_length:
         emit('error', {'message': 'Answer too short'})
         return
     
@@ -305,13 +356,11 @@ def handle_submit_answer(data):
     
     # Reset transcript for next question
     interview.current_transcript = ""
-    
-    # Generate TTS for reaction
-    audio_bytes = generate_tts(reaction)
+    interview.is_speaking = False
     
     emit('reaction', {
         'reaction': reaction,
-        'has_audio': audio_bytes is not None
+        'has_audio': True
     })
 
 

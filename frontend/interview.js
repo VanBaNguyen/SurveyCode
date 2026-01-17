@@ -39,16 +39,9 @@ async function playIntroduction() {
 socket.on('transcription', (data) => {
     console.log('Transcription received:', data);
     
-    const transcriptEl = document.getElementById('transcriptText');
-    transcriptEl.classList.remove('empty');
-    
     if (data.is_final) {
         currentTranscript = data.full_transcript;
-        transcriptEl.innerHTML = currentTranscript;
         console.log('Final transcript:', currentTranscript);
-    } else {
-        transcriptEl.innerHTML = currentTranscript + ' <span class="partial-text">' + data.text + '</span>';
-        console.log('Partial transcript:', data.text);
     }
 });
 
@@ -68,11 +61,24 @@ socket.on('reaction', async (data) => {
         }
     }
     
-    // Move to next question after reaction finishes playing
+    // Hide reaction and move to next question
     setTimeout(() => {
         reactionCard.style.display = 'none';
         getNextQuestion();
-    }, 1500);
+    }, 1000);
+});
+
+socket.on('auto_submit', (data) => {
+    console.log('Auto-submit triggered by silence detection');
+    console.log('Answer submitted:', data.answer);
+    
+    // Stop recording
+    stopRecording();
+    
+    // Server detected silence and auto-submitted
+    updateStatus('Answer recorded! AI is responding...');
+    const recordBtn = document.getElementById('recordBtn');
+    if (recordBtn) recordBtn.disabled = true;
 });
 
 socket.on('error', (data) => {
@@ -81,8 +87,19 @@ socket.on('error', (data) => {
 
 async function startInterview() {
     try {
+        console.log('Starting interview...');
         const response = await fetch(`${BACKEND_URL}/api/start`, { method: 'POST' });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
+        console.log('Interview started:', data);
+        
+        if (data.error) {
+            throw new Error(data.error);
+        }
         
         sessionId = data.session_id;
         updateStatus('Interview started! Preparing first question...');
@@ -90,14 +107,25 @@ async function startInterview() {
         await getNextQuestion();
     } catch (error) {
         console.error('Failed to start interview:', error);
-        updateStatus('Failed to connect to server. Please make sure the backend is running.', 'error');
+        updateStatus(`Failed to connect to server: ${error.message}. Please make sure the backend is running on port 5001.`, 'error');
     }
 }
 
 async function getNextQuestion() {
     try {
+        console.log('Fetching next question for session:', sessionId);
         const response = await fetch(`${BACKEND_URL}/api/question/${sessionId}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
+        console.log('Question data received:', data);
+        
+        if (data.error) {
+            throw new Error(data.error);
+        }
         
         if (data.completed) {
             // All questions done, proceed to code review
@@ -117,48 +145,70 @@ async function getNextQuestion() {
         document.getElementById('questionText').textContent = data.question;
         document.getElementById('questionCard').classList.remove('hidden');
         document.getElementById('transcriptCard').classList.remove('hidden');
-        document.getElementById('transcriptText').textContent = 'Click "Start Recording" and speak your answer...';
+        document.getElementById('transcriptText').textContent = 'Click "Start Recording" to begin...';
         document.getElementById('transcriptText').classList.add('empty');
         
-        document.getElementById('recordBtn').disabled = false;
-        document.getElementById('submitBtn').disabled = true;
+        const recordBtn = document.getElementById('recordBtn');
+        if (recordBtn) recordBtn.disabled = true;
         
         currentTranscript = '';
         
         updateStatus(`Question ${currentQuestionNumber} of ${totalQuestions}`);
         
         // Play question TTS and wait for it to finish before enabling recording
-        if (data.has_audio) {
-            try {
-                await playTTS(data.question);
-                // Add a small pause after question finishes
-                await new Promise(resolve => setTimeout(resolve, 500));
-            } catch (error) {
-                console.error('Question TTS error:', error);
-            }
+        console.log('Playing question TTS...');
+        try {
+            await playTTS(data.question);
+            console.log('Question TTS finished');
+            // Add a small pause after question finishes
+            await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+            console.error('Question TTS error:', error);
+            updateStatus('TTS failed, but continuing...', 'error');
+        }
+        
+        // Enable recording button after question finishes
+        updateStatus('Click "Start Recording" to answer');
+        document.getElementById('transcriptText').textContent = 'Click "Start Recording" to begin...';
+        if (recordBtn) {
+            recordBtn.disabled = false;
+            recordBtn.textContent = '🎤 Start Recording';
         }
     } catch (error) {
         console.error('Failed to get question:', error);
-        updateStatus('Failed to load question', 'error');
+        updateStatus(`Failed to load question: ${error.message}`, 'error');
     }
 }
 
 async function playTTS(text) {
     try {
+        console.log('Generating TTS for:', text.substring(0, 50) + '...');
         const response = await fetch(`${BACKEND_URL}/api/tts`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text })
         });
         
+        if (!response.ok) {
+            throw new Error(`TTS HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const audioBlob = await response.blob();
+        console.log('TTS audio received, size:', audioBlob.size);
+        
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
         
         // Return a promise that resolves when audio finishes playing
         return new Promise((resolve, reject) => {
-            audio.onended = () => resolve();
-            audio.onerror = (error) => reject(error);
+            audio.onended = () => {
+                console.log('TTS playback finished');
+                resolve();
+            };
+            audio.onerror = (error) => {
+                console.error('Audio playback error:', error);
+                reject(error);
+            };
             audio.play().catch(reject);
         });
     } catch (error) {
@@ -197,6 +247,7 @@ async function startRecording() {
         source.connect(processor);
         processor.connect(audioContext.destination);
         
+        let chunkCount = 0;
         processor.onaudioprocess = (e) => {
             if (!isRecording) return;
             
@@ -209,10 +260,15 @@ async function startRecording() {
                 pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
             }
             
+            chunkCount++;
+            if (chunkCount % 10 === 0) {
+                console.log(`Sent ${chunkCount} audio chunks`);
+            }
+            
             // Send PCM data to server
             socket.emit('audio_chunk', {
                 session_id: sessionId,
-                audio: pcmData.buffer
+                audio: Array.from(pcmData)  // Convert to regular array for JSON
             });
         };
         
@@ -224,11 +280,11 @@ async function startRecording() {
         isRecording = true;
         
         const recordBtn = document.getElementById('recordBtn');
-        recordBtn.textContent = '⏹️ Stop Recording';
+        recordBtn.textContent = '🎤 Recording...';
         recordBtn.classList.add('recording');
-        document.getElementById('submitBtn').disabled = false;
         
         updateStatus('Recording... Speak your answer clearly');
+        document.getElementById('transcriptText').textContent = 'Listening...';
         console.log('Recording started - speak now!');
         
     } catch (error) {
@@ -258,6 +314,7 @@ function stopRecording() {
         const recordBtn = document.getElementById('recordBtn');
         recordBtn.textContent = '🎤 Start Recording';
         recordBtn.classList.remove('recording');
+        recordBtn.disabled = true;
         
         updateStatus('Recording stopped. Review your answer and click Submit.');
         console.log('Recording stopped. Current transcript:', currentTranscript);
@@ -291,8 +348,9 @@ async function completeInterview() {
     document.getElementById('progressBar').style.width = '100%';
     document.getElementById('questionCard').classList.add('hidden');
     document.getElementById('transcriptCard').classList.add('hidden');
-    document.getElementById('recordBtn').style.display = 'none';
-    document.getElementById('submitBtn').style.display = 'none';
+    
+    const recordBtn = document.getElementById('recordBtn');
+    if (recordBtn) recordBtn.style.display = 'none';
     
     // Get the submitted code from localStorage
     const submission = JSON.parse(localStorage.getItem('oa_last_submission') || '{}');
@@ -368,9 +426,17 @@ function updateStatus(message, type = 'info') {
     }
 }
 
-// Event listeners
-document.getElementById('recordBtn').addEventListener('click', toggleRecording);
-document.getElementById('submitBtn').addEventListener('click', submitAnswer);
+// Event listeners - buttons are now automatic/disabled
+document.addEventListener('DOMContentLoaded', () => {
+    const recordBtn = document.getElementById('recordBtn');
+    if (recordBtn) {
+        recordBtn.addEventListener('click', () => {
+            if (!isRecording) {
+                startRecording();
+            }
+        });
+    }
+});
 
 // Check if we have a submission
 window.addEventListener('DOMContentLoaded', () => {
