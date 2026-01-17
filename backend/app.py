@@ -111,6 +111,12 @@ class InterviewSession:
                     - Discuss time and space complexity of THEIR solution
                     - Suggest optimizations if applicable
                     
+                    IMPORTANT: For Big O notation, write it phonetically for text-to-speech:
+                    - Write "O(n)" as "O of N"
+                    - Write "O(n^2)" as "O of N squared"
+                    - Write "O(log n)" as "O of log N"
+                    - Write "O(1)" as "O of one"
+                    
                     Be honest, constructive, and encouraging. Focus on algorithmic thinking.
                     Keep feedback under 150 words and conversational."""},
                     {"role": "user", "content": f"Review this Two Sum solution written under interview conditions:\n\n{code}"}

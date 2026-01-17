@@ -8,6 +8,7 @@ let currentQuestion = null;
 let currentTranscript = '';
 let totalQuestions = 5;
 let currentQuestionNumber = 0;
+let interviewCompleted = false;  // Flag to prevent duplicate completion calls
 
 // Initialize Socket.IO
 socket = io(BACKEND_URL);
@@ -52,6 +53,8 @@ socket.on('reaction', async (data) => {
     reactionText.textContent = '💬 ' + data.reaction;
     reactionCard.style.display = 'block';
     
+    console.log(`Reaction received. Current question: ${currentQuestionNumber}, Total: ${totalQuestions}`);
+    
     // Play TTS and wait for it to finish
     if (data.has_audio) {
         try {
@@ -61,10 +64,25 @@ socket.on('reaction', async (data) => {
         }
     }
     
-    // Hide reaction and move to next question
+    // Hide reaction
     setTimeout(() => {
         reactionCard.style.display = 'none';
-        getNextQuestion();
+        
+        // Check if interview is already completed
+        if (interviewCompleted) {
+            console.log('Interview already completed, not calling getNextQuestion');
+            return;
+        }
+        
+        // Check if we just finished the last question
+        if (currentQuestionNumber >= totalQuestions) {
+            console.log(`Completed all ${totalQuestions} questions, moving to code review`);
+            interviewCompleted = true;
+            completeInterview();
+        } else {
+            console.log(`Moving to question ${currentQuestionNumber + 1}`);
+            getNextQuestion();
+        }
     }, 1000);
 });
 
@@ -112,6 +130,12 @@ async function startInterview() {
 }
 
 async function getNextQuestion() {
+    // Don't fetch if interview is already completed
+    if (interviewCompleted) {
+        console.log('Interview already completed, skipping getNextQuestion');
+        return;
+    }
+    
     try {
         console.log('Fetching next question for session:', sessionId);
         const response = await fetch(`${BACKEND_URL}/api/question/${sessionId}`);
@@ -129,12 +153,17 @@ async function getNextQuestion() {
         
         if (data.completed) {
             // All questions done, proceed to code review
+            console.log('Backend says all questions completed');
+            interviewCompleted = true;
             completeInterview();
             return;
         }
         
         currentQuestion = data;
         currentQuestionNumber = data.question_number;
+        
+        console.log(`Displaying question ${currentQuestionNumber} of ${totalQuestions}`);
+        console.log(`Backend current_question_index is now: ${currentQuestionNumber}`);
         
         // Update progress
         const progress = (currentQuestionNumber / totalQuestions) * 100;
@@ -344,13 +373,25 @@ async function submitAnswer() {
 }
 
 async function completeInterview() {
-    updateStatus('All questions completed! Preparing code review...');
-    document.getElementById('progressBar').style.width = '100%';
+    // Prevent duplicate calls
+    if (interviewCompleted && document.getElementById('questionCard').classList.contains('hidden')) {
+        console.log('completeInterview already running, skipping duplicate call');
+        return;
+    }
+    
+    console.log('Starting completeInterview()');
+    interviewCompleted = true;
+    
+    // Hide interview UI
     document.getElementById('questionCard').classList.add('hidden');
     document.getElementById('transcriptCard').classList.add('hidden');
     
     const recordBtn = document.getElementById('recordBtn');
     if (recordBtn) recordBtn.style.display = 'none';
+    
+    // Show processing status
+    updateStatus('All questions completed! AI is reviewing your code...');
+    document.getElementById('progressBar').style.width = '100%';
     
     // Get the submitted code from localStorage
     const submission = JSON.parse(localStorage.getItem('oa_last_submission') || '{}');
@@ -358,15 +399,13 @@ async function completeInterview() {
     
     if (!code) {
         updateStatus('No code found for review. Redirecting to feedback...');
-        setTimeout(() => {
-            window.location.href = 'feedback.html';
-        }, 2000);
+        window.location.replace('feedback.html');
         return;
     }
     
     // Submit code for review
     try {
-        updateStatus('AI is reviewing your code...');
+        console.log('Submitting code for AI review...');
         
         const response = await fetch(`${BACKEND_URL}/api/code_review`, {
             method: 'POST',
@@ -377,37 +416,31 @@ async function completeInterview() {
             })
         });
         
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
         const data = await response.json();
+        console.log('AI feedback received');
         
         // Store the AI feedback
         submission.ai_feedback = data.feedback;
         localStorage.setItem('oa_last_submission', JSON.stringify(submission));
         
-        // Play feedback TTS and wait for it to finish
-        if (data.has_audio) {
-            updateStatus('Playing AI feedback...');
-            try {
-                await playTTS(data.feedback);
-            } catch (error) {
-                console.error('Feedback TTS error:', error);
-            }
-        }
-        
         // Save session
         await fetch(`${BACKEND_URL}/api/save/${sessionId}`, { method: 'POST' });
         
-        updateStatus('Interview complete! Redirecting to feedback page...');
+        // Redirect immediately to feedback page where AI will speak
+        updateStatus('Review complete! Moving to feedback...');
+        console.log('Redirecting to feedback page...');
         
-        setTimeout(() => {
-            window.location.href = 'feedback.html';
-        }, 2000);
+        // Force redirect
+        window.location.replace('feedback.html');
         
     } catch (error) {
         console.error('Code review error:', error);
         updateStatus('Code review failed. Redirecting to feedback...');
-        setTimeout(() => {
-            window.location.href = 'feedback.html';
-        }, 2000);
+        window.location.replace('feedback.html');
     }
 }
 

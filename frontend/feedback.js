@@ -1,5 +1,41 @@
 /* Simple feedback page script: read last submission from localStorage and render mock feedback */
 
+const BACKEND_URL = 'http://localhost:5001';
+
+async function playFeedbackTTS(text) {
+  try {
+    console.log('Playing AI feedback via TTS...');
+    const response = await fetch(`${BACKEND_URL}/api/tts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`TTS HTTP ${response.status}`);
+    }
+    
+    const audioBlob = await response.blob();
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
+    
+    return new Promise((resolve, reject) => {
+      audio.onended = () => {
+        console.log('AI feedback TTS finished');
+        resolve();
+      };
+      audio.onerror = (error) => {
+        console.error('Audio playback error:', error);
+        reject(error);
+      };
+      audio.play().catch(reject);
+    });
+  } catch (error) {
+    console.error('TTS error:', error);
+    // Don't block the page if TTS fails
+  }
+}
+
 function escapeHtml(s) {
   return String(s)
     .replaceAll("&", "&amp;")
@@ -305,4 +341,17 @@ window.addEventListener("DOMContentLoaded", () => {
       applySegmentHighlight(CURRENT_SEGMENT, SEGMENTS);
     });
   }
+  
+  // Play AI feedback TTS when page loads
+  setTimeout(() => {
+    const submission = JSON.parse(localStorage.getItem("oa_last_submission") || '{}');
+    const aiFeedback = submission?.ai_feedback;
+    
+    if (aiFeedback) {
+      console.log('AI feedback found, playing TTS immediately...');
+      playFeedbackTTS(aiFeedback);
+    } else {
+      console.log('No AI feedback found in localStorage');
+    }
+  }, 500); // Wait 0.5 seconds for page to settle
 });
