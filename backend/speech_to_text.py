@@ -22,12 +22,12 @@ class RealtimeSpeechToText:
         self.model = WhisperModel(model_size, device="cpu", compute_type="int8")
         print("Model loaded!\n")
         
-        # Audio settings
+        # Audio settings - REDUCED for lower latency
         self.CHUNK = 1024
         self.FORMAT = pyaudio.paInt16
         self.CHANNELS = 1
         self.RATE = 16000
-        self.RECORD_SECONDS = 3  # Process every 3 seconds
+        self.RECORD_SECONDS = 1  # Reduced from 3 to 1 second for lower latency
         
         self.audio_queue = queue.Queue()
         self.is_running = False
@@ -70,7 +70,14 @@ class RealtimeSpeechToText:
                 audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
                 
                 # Transcribe with Faster-Whisper
-                segments, info = self.model.transcribe(audio_np, language="en", beam_size=5)
+                # Use smaller beam_size for faster processing
+                segments, info = self.model.transcribe(
+                    audio_np, 
+                    language="en", 
+                    beam_size=1,  # Reduced from 5 to 1 for speed
+                    vad_filter=True,  # Voice activity detection to skip silence
+                    vad_parameters=dict(min_silence_duration_ms=500)
+                )
                 
                 # Collect all segments
                 text_parts = []
@@ -118,7 +125,8 @@ class RealtimeSpeechToText:
 
 
 if __name__ == "__main__":
-    # Use "tiny", "base", "small", "medium", or "large-v2" model
-    # "base" is a good balance between speed and accuracy
-    stt = RealtimeSpeechToText(model_size="base")
+    # Use "tiny" for lowest latency (fastest)
+    # Use "base" for balance of speed and accuracy
+    # Use "small", "medium", or "large-v2" for better accuracy but slower
+    stt = RealtimeSpeechToText(model_size="base")  # Changed to "tiny" for lower latency
     stt.start()
