@@ -14,8 +14,27 @@ socket = io(BACKEND_URL);
 
 socket.on('connected', (data) => {
     console.log('Connected to server');
-    startInterview();
+    playIntroduction();
 });
+
+async function playIntroduction() {
+    const introText = "Hello! Thank you for submitting your code. Before we provide feedback, we'd like to ask you a few quick questions to get to know you better. This will only take a few minutes. Let's begin!";
+    
+    updateStatus('Welcome! Please listen to the introduction...');
+    
+    try {
+        // Wait for intro to finish playing completely
+        await playTTS(introText);
+        // Add a pause after intro before starting questions
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Now start the interview
+        await startInterview();
+    } catch (error) {
+        console.error('Intro playback error:', error);
+        // If TTS fails, just start the interview
+        await startInterview();
+    }
+}
 
 socket.on('transcription', (data) => {
     const transcriptEl = document.getElementById('transcriptText');
@@ -29,23 +48,27 @@ socket.on('transcription', (data) => {
     }
 });
 
-socket.on('reaction', (data) => {
+socket.on('reaction', async (data) => {
     const reactionCard = document.getElementById('reactionCard');
     const reactionText = document.getElementById('reactionText');
     
     reactionText.textContent = '💬 ' + data.reaction;
     reactionCard.style.display = 'block';
     
-    // Play TTS if available
+    // Play TTS and wait for it to finish
     if (data.has_audio) {
-        playTTS(data.reaction);
+        try {
+            await playTTS(data.reaction);
+        } catch (error) {
+            console.error('Reaction TTS error:', error);
+        }
     }
     
-    // Move to next question after reaction
+    // Move to next question after reaction finishes playing
     setTimeout(() => {
         reactionCard.style.display = 'none';
         getNextQuestion();
-    }, 3000);
+    }, 1500);
 });
 
 socket.on('error', (data) => {
@@ -100,9 +123,15 @@ async function getNextQuestion() {
         
         updateStatus(`Question ${currentQuestionNumber} of ${totalQuestions}`);
         
-        // Play question TTS
+        // Play question TTS and wait for it to finish before enabling recording
         if (data.has_audio) {
-            await playTTS(data.question);
+            try {
+                await playTTS(data.question);
+                // Add a small pause after question finishes
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (error) {
+                console.error('Question TTS error:', error);
+            }
         }
     } catch (error) {
         console.error('Failed to get question:', error);
@@ -121,9 +150,16 @@ async function playTTS(text) {
         const audioBlob = await response.blob();
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
-        await audio.play();
+        
+        // Return a promise that resolves when audio finishes playing
+        return new Promise((resolve, reject) => {
+            audio.onended = () => resolve();
+            audio.onerror = (error) => reject(error);
+            audio.play().catch(reject);
+        });
     } catch (error) {
         console.error('TTS playback error:', error);
+        throw error;
     }
 }
 
@@ -243,10 +279,14 @@ async function completeInterview() {
         submission.ai_feedback = data.feedback;
         localStorage.setItem('oa_last_submission', JSON.stringify(submission));
         
-        // Play feedback TTS
+        // Play feedback TTS and wait for it to finish
         if (data.has_audio) {
             updateStatus('Playing AI feedback...');
-            await playTTS(data.feedback);
+            try {
+                await playTTS(data.feedback);
+            } catch (error) {
+                console.error('Feedback TTS error:', error);
+            }
         }
         
         // Save session
