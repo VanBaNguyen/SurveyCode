@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OA Feedback</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="feedback-page">
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div class="brand-text">
+            <div class="brand-title">OA Simulator</div>
+            <div class="brand-subtitle">Feedback</div>
+          </div>
+        </div>
+
+        <div class="topbar-center">
+          <div class="status-chip status-timer" id="timer" aria-label="Timer">Feedback</div>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="btn btn-ghost" id="btn-back" type="button">Back to OA</button>
+        </div>
+      </header>
+
+      <main class="main main-wide">
+        <section class="feedback">
+          <div class="feedback-card feedback-card-wide">
+            <div class="feedback-header">
+              <div>
+                <div class="feedback-title">Assessment feedback</div>
+                <div class="feedback-subtitle" id="feedback-problem-title">Problem</div>
+              </div>
+              <div class="feedback-pill" id="feedback-verdict">Analyzing…</div>
+            </div>
+
+            <div class="feedback-layout">
+              <div class="feedback-codeview">
+                <div class="feedback-section-title">Your code</div>
+                <div class="code-view" id="code-view"></div>
+              </div>
+
+              <div class="feedback-section feedback-section-side">
+                <div class="feedback-section-title">Segment feedback</div>
+                <div class="segment-cards" id="segment-cards"></div>
+
+                <div class="segment-nav">
+                  <button class="btn btn-secondary" id="btn-prev-segment" type="button">Previous</button>
+                  <button class="btn btn-primary" id="btn-next-segment" type="button">Next</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="feedback-grid">
+              <div class="feedback-section">
+                <div class="feedback-section-title">Summary</div>
+                <ul class="feedback-list" id="feedback-strengths"></ul>
+                <ul class="feedback-list feedback-list-muted" id="feedback-improvements"></ul>
+              </div>
+
+              <div class="feedback-section">
+                <div class="feedback-section-title">Complexity & correctness</div>
+                <div class="feedback-metric" id="feedback-complexity"></div>
+                <div class="feedback-metric" id="feedback-tests"></div>
+              </div>
+            </div>
+
+            <div class="feedback-section">
+              <div class="feedback-section-title">Suggested approach</div>
+              <p class="feedback-text" id="feedback-explanation"></p>
+              <pre class="feedback-code" id="feedback-solution"></pre>
+            </div>
+
+            <div class="feedback-footer">
+              <button class="btn btn-secondary" id="btn-back-bottom" type="button">Back to OA</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./feedback.js"></script>
+  </body>
+</html>
