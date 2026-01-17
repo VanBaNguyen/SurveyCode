@@ -210,3 +210,4 @@ backend/vosk*
 vosk*
 ignorescripts/
 backend/model/
+*.json
