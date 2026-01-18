@@ -181,9 +181,14 @@ def start_interview():
     """Initialize a new interview session"""
     try:
         session_id = str(time.time())
-        sessions[session_id] = InterviewSession(session_id)
+        interview = InterviewSession(session_id)
+        sessions[session_id] = interview
         print(f"Started new interview session: {session_id}")
-        return jsonify({"session_id": session_id, "status": "ready"})
+        return jsonify({
+            "session_id": session_id, 
+            "status": "ready",
+            "total_questions": len(interview.questions)
+        })
     except Exception as e:
         print(f"Error starting interview: {e}")
         import traceback

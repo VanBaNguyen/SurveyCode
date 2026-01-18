@@ -6,7 +6,7 @@ let mediaRecorder;
 let isRecording = false;
 let currentQuestion = null;
 let currentTranscript = '';
-let totalQuestions = 5;
+let totalQuestions = 0;  // Will be set from backend
 let currentQuestionNumber = 0;
 let interviewCompleted = false;  // Flag to prevent duplicate completion calls
 
@@ -120,6 +120,9 @@ async function startInterview() {
         }
         
         sessionId = data.session_id;
+        totalQuestions = data.total_questions || 5;  // Get from backend
+        console.log(`Total questions: ${totalQuestions}`);
+        
         updateStatus('Interview started! Preparing first question...');
         
         await getNextQuestion();
