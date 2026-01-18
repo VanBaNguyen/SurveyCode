@@ -16,6 +16,33 @@
             padding: 40px 20px;
         }
         
+        .skip-interview-btn {
+            position: relative;
+        }
+        
+        .skip-interview-btn::after {
+            content: attr(title);
+            position: absolute;
+            bottom: -45px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .skip-interview-btn:hover::after {
+            opacity: 1;
+        }
+        
         .interview-header {
             text-align: center;
             margin-bottom: 40px;
@@ -212,6 +239,9 @@
                     <div class="brand-title">SurveyCode</div>
                     <div class="brand-subtitle">Voice Interview</div>
                 </div>
+            </div>
+            <div class="topbar-actions" style="margin-right: 200px;">
+                <button class="btn btn-ghost skip-interview-btn" id="skipInterviewBtn" type="button" title="You will not receive OA technical feedback if you skip">Skip</button>
             </div>
         </header>
 

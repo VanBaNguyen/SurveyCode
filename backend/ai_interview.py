@@ -54,7 +54,7 @@ class AIInterviewer:
         self.RATE = 16000
         
         # Silence detection settings
-        self.SILENCE_THRESHOLD = 1.8  # seconds of silence to consider answer complete (reduced from 2.5)
+        self.SILENCE_THRESHOLD = 0.8  # seconds of silence to consider answer complete
         self.MIN_ANSWER_LENGTH = 10  # minimum characters for a valid answer
         self.last_speech_time = time.time()
         
@@ -327,7 +327,7 @@ class AIInterviewer:
         print("\nInstructions:")
         print("- The AI will ask you questions")
         print("- Speak your answer clearly")
-        print("- System detects when you're done (1.8s silence)")
+        print("- System detects when you're done (0.8s silence)")
         print("- Minimum 10 characters for valid answer")
         print("- Press Ctrl+C to stop anytime\n")
         print("=" * 60)

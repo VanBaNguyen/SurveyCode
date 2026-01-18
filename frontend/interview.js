@@ -472,6 +472,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    
+    // Skip button handler
+    const skipBtn = document.getElementById('skipInterviewBtn');
+    if (skipBtn) {
+        skipBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to skip? You will not receive OA technical feedback if you skip.')) {
+                // Navigate to thank you page without feedback
+                window.location.href = 'thankyou.html';
+            }
+        });
+    }
 });
 
 // Check if we have a submission
