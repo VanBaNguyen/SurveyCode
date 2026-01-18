@@ -425,5 +425,45 @@ def save_session(session_id):
         return jsonify({"error": "Failed to save"}), 500
 
 
+@app.route('/api/segment_feedback', methods=['POST'])
+def segment_feedback():
+    """Generate AI feedback for a code segment"""
+    try:
+        data = request.json
+        code = data.get('code', '')
+        segment_index = data.get('segment_index', 0)
+        total_segments = data.get('total_segments', 1)
+        language = data.get('language', 'python')
+        
+        if not code:
+            return jsonify({"feedback": "No code provided for this segment."}), 200
+        
+        # Generate AI feedback for this specific segment
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": """You are a code reviewer providing specific feedback on a code segment.
+                
+                Analyze ONLY the provided code segment and give specific, actionable feedback:
+                - What does this segment do?
+                - Is the logic correct?
+                - Are there any issues or improvements?
+                - How does it contribute to solving the problem?
+                
+                Be specific to the actual code shown. Keep feedback under 60 words."""},
+                {"role": "user", "content": f"Review this code segment ({segment_index + 1} of {total_segments}) from a Two Sum solution:\n\n{code}"}
+            ],
+            max_tokens=150,
+            temperature=0.7
+        )
+        
+        feedback = response.choices[0].message.content.strip()
+        return jsonify({"feedback": feedback})
+        
+    except Exception as e:
+        print(f"Segment feedback error: {e}")
+        return jsonify({"feedback": "Unable to generate feedback for this segment."}), 500
+
+
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5001, debug=True)

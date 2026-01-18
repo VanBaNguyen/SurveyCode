@@ -139,11 +139,11 @@ function segmentCode(code, language) {
   const startsNewBlock = (line) => {
     const t = line.trim();
     if (!t) return false;
+    // Only create segments for major blocks
     if (/^def\s+/.test(t)) return true;
     if (/^class\s+/.test(t)) return true;
-    if (/^(for|while|if|elif|else)\b/.test(t)) return true;
     if (/^function\b/.test(t)) return true;
-    if (/^(public|private|protected)\s+/.test(t)) return true;
+    if (/^(public|private|protected)\s+(static\s+)?\w+/.test(t)) return true;
     return false;
   };
 
@@ -155,7 +155,7 @@ function segmentCode(code, language) {
       return;
     }
 
-    // If this line clearly starts a new logical block, start a new segment
+    // Start new segment only for major blocks
     if (startsNewBlock(line)) {
       current = { id: `seg-${segments.length + 1}`, startLine: lineNumber, endLine: lineNumber };
       segments.push(current);
@@ -164,12 +164,52 @@ function segmentCode(code, language) {
     }
   });
 
-  // Fallback: if for some reason nothing useful, one big segment
-  if (!segments.length) {
-    segments.push({ id: "seg-1", startLine: 1, endLine: lines.length || 1 });
+  // Merge very small segments (less than 3 lines) with adjacent ones
+  const mergedSegments = [];
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    const span = seg.endLine - seg.startLine + 1;
+    
+    if (span < 3 && mergedSegments.length > 0) {
+      // Merge with previous segment
+      mergedSegments[mergedSegments.length - 1].endLine = seg.endLine;
+    } else {
+      mergedSegments.push(seg);
+    }
   }
 
-  return segments;
+  // Fallback: if no segments, create one for entire code
+  if (!mergedSegments.length) {
+    mergedSegments.push({ id: "seg-1", startLine: 1, endLine: lines.length || 1 });
+  }
+
+  return mergedSegments;
+}
+
+async function generateSegmentFeedback(segmentCode, segmentIndex, totalSegments, language) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/segment_feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        code: segmentCode,
+        segment_index: segmentIndex,
+        total_segments: totalSegments,
+        language: language
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.feedback;
+  } catch (error) {
+    console.error('Segment feedback error:', error);
+    // Fallback to generic feedback
+    return buildSegmentNotes({ startLine: 0, endLine: 0 }, segmentIndex, totalSegments, language);
+  }
 }
 
 function buildSegmentNotes(segment, idx, total, language) {
@@ -180,7 +220,7 @@ function buildSegmentNotes(segment, idx, total, language) {
   if (span >= 5) {
     return `This segment contains the main logic of your solution. Check that edge cases are handled (empty input, duplicates, large sizes) and that the loop conditions are correct.`;
   }
-  return `This shorter segment supports your main logic. Consider whether it can be simplified or merged for readability.`;
+  return `This segment supports your main logic. Consider whether it can be simplified or merged for readability.`;
 }
 
 function renderCodeWithSegments(code, segments) {
@@ -204,9 +244,13 @@ function renderCodeWithSegments(code, segments) {
 
 function applySegmentHighlight(index, segments) {
   const lines = document.querySelectorAll(".code-line");
-  if (!lines.length || !segments.length) return;
+  if (!lines.length || !segments.length) {
+    console.log('Cannot apply highlight - no lines or segments');
+    return;
+  }
 
   const seg = segments[Math.max(0, Math.min(index, segments.length - 1))];
+  console.log(`Highlighting segment ${index}: lines ${seg.startLine}-${seg.endLine}`);
   
   lines.forEach((el) => {
     const n = Number(el.getAttribute("data-line"));
@@ -225,15 +269,21 @@ function applySegmentHighlight(index, segments) {
   });
 }
 
-function buildSegmentCards(segments, language) {
+async function buildSegmentCards(segments, language, fullCode) {
   const container = document.getElementById("segment-cards");
   if (!container) return;
 
-  container.innerHTML = "";
+  container.innerHTML = "<div style='padding: 10px; color: #666;'>Generating AI feedback for code segments...</div>";
 
-  segments.forEach((seg, idx) => {
+  const lines = fullCode.replace(/\r\n/g, "\n").split("\n");
+  
+  for (let idx = 0; idx < segments.length; idx++) {
+    const seg = segments[idx];
+    const segmentCode = lines.slice(seg.startLine - 1, seg.endLine).join("\n");
+    
     const card = document.createElement("div");
     card.className = "segment-card";
+    if (idx === 0) card.classList.add("is-active");
 
     const title = document.createElement("div");
     title.className = "segment-card-title";
@@ -245,14 +295,21 @@ function buildSegmentCards(segments, language) {
 
     const notes = document.createElement("p");
     notes.className = "feedback-text";
-    notes.textContent = buildSegmentNotes(seg, idx, segments.length, language);
+    notes.textContent = "Analyzing...";
 
     card.appendChild(title);
     card.appendChild(linesMeta);
     card.appendChild(notes);
 
+    if (idx === 0) {
+      container.innerHTML = "";
+    }
     container.appendChild(card);
-  });
+    
+    // Generate AI feedback for this segment
+    const feedback = await generateSegmentFeedback(segmentCode, idx, segments.length, language);
+    notes.textContent = feedback;
+  }
 }
 
 function renderFeedback() {
@@ -304,11 +361,16 @@ function renderFeedback() {
   if (explEl) explEl.textContent = mock.explanation;
   if (solEl) solEl.textContent = mock.referenceSolution;
 
-  // Build and render code segments
-  SEGMENTS = segmentCode(submission.code || "", submission.language || "python");
-  CURRENT_SEGMENT = 0;
-  buildSegmentCards(SEGMENTS, submission.language || "python");
-  renderCodeWithSegments(submission.code || "", SEGMENTS);
+  // Build and render code segments (async)
+  (async () => {
+    console.log('Building code segments...');
+    SEGMENTS = segmentCode(submission.code || "", submission.language || "python");
+    CURRENT_SEGMENT = 0;
+    console.log(`Created ${SEGMENTS.length} segments`);
+    await buildSegmentCards(SEGMENTS, submission.language || "python", submission.code || "");
+    renderCodeWithSegments(submission.code || "", SEGMENTS);
+    console.log('Code segments rendered');
+  })();
 }
 
 function wireBackButtons() {
@@ -327,10 +389,16 @@ window.addEventListener("DOMContentLoaded", () => {
   wireBackButtons();
   const prev = document.getElementById("btn-prev-segment");
   const next = document.getElementById("btn-next-segment");
+  
+  console.log('Setting up segment navigation buttons');
+  console.log('Prev button:', prev);
+  console.log('Next button:', next);
+  
   if (prev) {
     prev.addEventListener("click", () => {
       if (!SEGMENTS.length) return;
       CURRENT_SEGMENT = Math.max(0, CURRENT_SEGMENT - 1);
+      console.log(`Moving to segment ${CURRENT_SEGMENT}`);
       applySegmentHighlight(CURRENT_SEGMENT, SEGMENTS);
     });
   }
@@ -338,6 +406,7 @@ window.addEventListener("DOMContentLoaded", () => {
     next.addEventListener("click", () => {
       if (!SEGMENTS.length) return;
       CURRENT_SEGMENT = Math.min(SEGMENTS.length - 1, CURRENT_SEGMENT + 1);
+      console.log(`Moving to segment ${CURRENT_SEGMENT}`);
       applySegmentHighlight(CURRENT_SEGMENT, SEGMENTS);
     });
   }
