@@ -4,7 +4,7 @@ A platform that combines coding assessments with voice-based surveys to provide 
 
 ## Overview
 
-SurveyCode streamlines the online assessment experience by integrating a conversational AI interview directly into the submission flow. After completing a coding challenge, candidates participate in a brief voice survey where they answer questions about their background and approach. This allows us to provide immediate, contextual feedback on their code while gathering valuable survey data seamlessly.
+SurveyCode streamlines the online assessment experience by integrating a conversational AI survey directly into the submission flow. After completing a coding challenge, candidates participate in a brief voice survey where they answer questions. This allows us to provide immediate, contextual feedback on their code while gathering valuable survey data seamlessly.
 
 ## Key Features
 
@@ -18,7 +18,7 @@ SurveyCode streamlines the online assessment experience by integrating a convers
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.8+ (Python 13+ had issues for us)
 - Node.js (for frontend development)
 - OpenAI API key
 - ElevenLabs API key
