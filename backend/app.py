@@ -81,16 +81,16 @@ class InterviewSession:
             response = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a friendly interviewer. Give a brief, natural 1-sentence reaction to what the person just said. Be encouraging and conversational. Don't ask questions. Keep it under 15 words."},
+                    {"role": "system", "content": "You are a warm, enthusiastic interviewer. Give a brief, positive 1-2 sentence reaction that specifically references what they just said. Be encouraging, show genuine interest, and acknowledge specific details they mentioned. Keep it natural and conversational, under 20 words."},
                     {"role": "user", "content": f"They said: {answer}"}
                 ],
-                max_tokens=30,
-                temperature=0.7
+                max_tokens=40,
+                temperature=0.8
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
             print(f"Reaction error: {e}")
-            return "That's interesting!"
+            return "That's great to hear!"
     
     def generate_code_feedback(self, code):
         try:

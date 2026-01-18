@@ -97,16 +97,16 @@ class AIInterviewer:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a friendly interviewer. Give a brief, natural 1-sentence reaction to what the person just said. Be encouraging and conversational. Don't ask questions. Keep it under 15 words."},
+                    {"role": "system", "content": "You are a warm, enthusiastic interviewer. Give a brief, positive 1-2 sentence reaction that specifically references what they just said. Be encouraging, show genuine interest, and acknowledge specific details they mentioned. Keep it natural and conversational, under 20 words."},
                     {"role": "user", "content": f"They said: {answer}"}
                 ],
-                max_tokens=30,  # Reduced from 50 for faster generation
-                temperature=0.7
+                max_tokens=40,
+                temperature=0.8
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
             print(f"⚠️  Reaction generation error: {e}")
-            return "That's interesting!"
+            return "That's great to hear!"
     
     def load_code_submission(self, code_string=None, code_file="code_submission.py"):
         """Load code submission for review - accepts string or file"""
