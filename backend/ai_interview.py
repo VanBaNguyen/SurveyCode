@@ -97,7 +97,7 @@ class AIInterviewer:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a warm, enthusiastic interviewer. Give a brief, positive 1-2 sentence reaction that specifically references what they just said. Be encouraging, show genuine interest, and acknowledge specific details they mentioned. Keep it natural and conversational, under 20 words."},
+                    {"role": "system", "content": "You are a warm, enthusiastic interviewer. Give a brief, positive 1-2 sentence reaction that specifically references what they just said. Be encouraging, show genuine interest, and acknowledge specific details they mentioned. Keep it natural and conversational, under 20 words. DO NOT ask any questions or follow-ups. Only provide acknowledgment and encouragement."},
                     {"role": "user", "content": f"They said: {answer}"}
                 ],
                 max_tokens=40,
