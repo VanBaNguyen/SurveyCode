@@ -14,13 +14,20 @@ function initStart() {
   const storedConsent = localStorage.getItem(CONSENT_KEY) === "true";
   if (storedConsent) consent.checked = true;
 
+  function updateButton() {
+    startBtn.disabled = !consent.checked;
+  }
+
   function persist() {
     localStorage.setItem(CONSENT_KEY, String(consent.checked));
     // Always set survey opt-in to true since we removed the option to skip
     localStorage.setItem(SURVEY_KEY, "true");
   }
 
-  consent.addEventListener("change", persist);
+  consent.addEventListener("change", () => {
+    persist();
+    updateButton();
+  });
 
   function goToOA() {
     const params = new URLSearchParams(window.location.search);
@@ -32,6 +39,9 @@ function initStart() {
     persist();
     goToOA();
   });
+
+  // Initialize button state
+  updateButton();
 }
 
 document.addEventListener("DOMContentLoaded", initStart);
