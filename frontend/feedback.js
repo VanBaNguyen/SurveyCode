@@ -374,14 +374,12 @@ function renderFeedback() {
 }
 
 function wireBackButtons() {
-  const goBack = () => {
-    window.location.href = "index.html";
-  };
-
-  const top = document.getElementById("btn-back");
-  const bottom = document.getElementById("btn-back-bottom");
-  if (top) top.addEventListener("click", goBack);
-  if (bottom) bottom.addEventListener("click", goBack);
+  const thankYouBtn = document.getElementById("btn-thank-you");
+  if (thankYouBtn) {
+    thankYouBtn.addEventListener("click", () => {
+      window.location.href = "thankyou.html";
+    });
+  }
 }
 
 window.addEventListener("DOMContentLoaded", () => {
