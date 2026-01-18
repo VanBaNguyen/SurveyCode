@@ -49,7 +49,7 @@ class InterviewSession:
         self.code_review = None
         self.last_speech_time = time.time()
         self.is_speaking = False
-        self.silence_threshold = 2.0  # seconds of silence to auto-submit
+        self.silence_threshold = 1.0  # seconds of silence to auto-submit
         self.min_answer_length = 10
         self.answer_submitted = False  # Prevent duplicate submissions
         

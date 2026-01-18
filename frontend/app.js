@@ -233,7 +233,7 @@ function init() {
     });
   });
 
-  $("#btn-reset").addEventListener("click", () => resetAll());
+  // Reset button removed - auto-resets on server restart
 
   const backBtn = $maybe("#btn-back-to-code");
   if (backBtn) {
@@ -243,6 +243,9 @@ function init() {
   }
 
   initAssessment({ fresh: false });
+  
+  // Start health check polling for auto-reset
+  startHealthCheck();
 }
 
 function initAssessment({ fresh }) {
