@@ -1,4 +1,6 @@
 const STORAGE_KEY = "oa_simulator_state_v2";
+const CONSENT_KEY = "oa_consent_recording";
+const SURVEY_KEY = "oa_survey_opt_in";
 
 const DEFAULT_OA = {
   id: "two-sum",
@@ -217,6 +219,15 @@ function updateSaveStatus(text) {
 }
 
 function init() {
+  // If this script is loaded on a page without the editor, do nothing.
+  if (!$maybe("#editor")) return;
+
+  // Enforce consent before allowing the OA.
+  if (String(localStorage.getItem(CONSENT_KEY)) !== "true") {
+    window.location.href = "index.html";
+    return;
+  }
+
   OA = loadOAFromUrl() || DEFAULT_OA;
   renderProblem(OA);
 
@@ -245,7 +256,7 @@ function init() {
   initAssessment({ fresh: false });
   
   // Start health check polling for auto-reset
-  startHealthCheck();
+  if (typeof startHealthCheck === "function") startHealthCheck();
 }
 
 function initAssessment({ fresh }) {
@@ -332,6 +343,7 @@ function initAssessment({ fresh }) {
   submitBtn2.addEventListener("click", () => {
     console.log("Submit button clicked");
     const snapshot = persist();
+    const surveyOptIn = localStorage.getItem(SURVEY_KEY);
     const payload = {
       submittedAt: nowIso(),
       oa: {
@@ -340,7 +352,8 @@ function initAssessment({ fresh }) {
       },
       language: snapshot.language,
       code: snapshot.code,
-      timeRemainingSeconds: Math.max(0, Math.floor((snapshot.endAtMs - Date.now()) / 1000))
+      timeRemainingSeconds: Math.max(0, Math.floor((snapshot.endAtMs - Date.now()) / 1000)),
+      surveyOptIn: surveyOptIn !== "false"
     };
 
     updateSaveStatus(`Submitted at ${new Date().toLocaleTimeString()}`);
@@ -350,8 +363,13 @@ function initAssessment({ fresh }) {
       localStorage.setItem("oa_last_submission", JSON.stringify(payload));
     } catch (_) {}
 
-    // Redirect to interview page instead of feedback
-    window.location.href = "interview.html";
+    // Route based on whether the user opted into the voice survey.
+    // If they skip the survey, no feedback is provided.
+    if (payload.surveyOptIn) {
+      window.location.href = "interview.html";
+    } else {
+      window.location.href = "thankyou.html";
+    }
   });
 }
 

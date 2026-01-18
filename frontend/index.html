@@ -3,133 +3,98 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OA Simulator</title>
+    <title>Start - SurveyCode</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
     <link rel="stylesheet" href="./styles.css" />
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css" />
   </head>
-  <body>
+  <body class="feedback-page start-page">
     <div class="app-shell">
       <header class="topbar">
         <div class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
           <div class="brand-text">
-            <div class="brand-title">OA Simulator</div>
-            <div class="brand-subtitle">Candidate view</div>
+            <div class="brand-title">SurveyCode</div>
+            <div class="brand-subtitle">Before you begin</div>
           </div>
         </div>
-
-        <div class="topbar-center">
-          <div class="status-chip status-timer" id="timer" aria-label="Timer">45:00</div>
-        </div>
-
         <div class="topbar-actions">
           <!-- Auto-resets on server restart -->
         </div>
       </header>
 
-      <main class="main main-wide" id="main">
-        <section class="workspace" data-screen="coding">
-          <aside class="left">
-            <div class="problem-header">
-              <div class="problem-meta">
-                <div class="problem-title" id="problem-title">Two Sum</div>
-                <div class="problem-tags">
-                  <span class="tag">Array</span>
-                  <span class="tag">Hash Map</span>
-                  <span class="tag">Easy</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="tabs">
-              <button class="tab is-active" type="button" data-tab="description">Description</button>
-              <button class="tab" type="button" data-tab="examples">Examples</button>
-              <button class="tab" type="button" data-tab="constraints">Constraints</button>
-            </div>
-
-            <div class="problem" id="problem">
-              <div class="tab-panel" data-panel="description"></div>
-              <div class="tab-panel" data-panel="examples" hidden></div>
-              <div class="tab-panel" data-panel="constraints" hidden></div>
-            </div>
-          </aside>
-
-          <section class="right">
-            <div class="editor-wrap">
-              <textarea id="editor" aria-label="Code editor"></textarea>
-            </div>
-
-            <div class="actionbar">
-              <div class="actionbar-left">
-                <div class="lang">
-                  <select id="language" class="select">
-                    <option value="python">Python</option>
-                    <option value="javascript">JavaScript</option>
-                    <option value="java">Java</option>
-                    <option value="cpp">C++</option>
-                  </select>
-                </div>
-
-                <div class="save-status" id="save-status"></div>
-              </div>
-
-              <div class="actionbar-right">
-                <button class="btn btn-secondary" id="btn-save" type="button">Save</button>
-                <button class="btn btn-primary" id="btn-submit" type="button">Submit</button>
-              </div>
-            </div>
-          </section>
-        </section>
-
-        <section class="feedback" data-screen="feedback" hidden>
-          <div class="feedback-card">
-            <div class="feedback-header">
-              <div>
-                <div class="feedback-title">Assessment feedback</div>
-                <div class="feedback-subtitle" id="feedback-problem-title">Two Sum</div>
-              </div>
-              <div class="feedback-pill" id="feedback-verdict">Analyzing…</div>
-            </div>
-
-            <div class="feedback-grid">
-              <div class="feedback-section">
-                <div class="feedback-section-title">Summary</div>
-                <ul class="feedback-list" id="feedback-strengths"></ul>
-                <ul class="feedback-list feedback-list-muted" id="feedback-improvements"></ul>
-              </div>
-
-              <div class="feedback-section">
-                <div class="feedback-section-title">Complexity & correctness</div>
-                <div class="feedback-metric" id="feedback-complexity"></div>
-                <div class="feedback-metric" id="feedback-tests"></div>
-              </div>
-            </div>
-
-            <div class="feedback-section">
-              <div class="feedback-section-title">Suggested approach</div>
-              <p class="feedback-text" id="feedback-explanation"></p>
-              <pre class="feedback-code" id="feedback-solution"></pre>
-            </div>
-
-            <div class="feedback-footer">
-              <button class="btn btn-secondary" id="btn-back-to-code" type="button">Back to code</button>
+      <main class="main">
+        <div class="card" style="max-width: 1120px; margin: 0 auto;">
+          <div class="card-header">
+            <div class="h1">Instructions</div>
+            <div class="muted" style="margin-top: 10px;">
+              Complete the coding task within the time limit. When you submit, you may optionally complete a short conversational survey.
             </div>
           </div>
-        </section>
+
+          <div class="card-body">
+            <div class="grid-2">
+              <div class="panel">
+                <div class="kicker">How it works</div>
+                <ul class="list">
+                  <li><span class="dot"></span>Read the prompt (Description, Examples, Constraints).</li>
+                  <li><span class="dot"></span>Write your solution in the editor and submit before time runs out.</li>
+                  <li><span class="dot"></span>Your solution and responses may be recorded for review.</li>
+                </ul>
+              </div>
+
+              <div class="panel">
+                <div class="kicker">Overview</div>
+                <div class="muted" style="line-height: 1.6;">
+                  The conversational survey is optional. If you skip the survey, you will not receive OA feedback.
+                </div>
+
+                <div style="margin-top: 14px;">
+                  <div class="kicker" style="margin-bottom: 8px;">Conversational survey</div>
+                  <label style="display:flex; gap:10px; align-items:center; margin-bottom: 8px;">
+                    <input id="survey-yes" type="radio" name="survey" checked />
+                    <span class="muted">Take the survey (recommended) — receive feedback after.</span>
+                  </label>
+                  <label style="display:flex; gap:10px; align-items:center;">
+                    <input id="survey-no" type="radio" name="survey" />
+                    <span class="muted">Skip the survey — no feedback will be provided.</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel" style="margin-top: 14px;">
+              <div class="kicker">Consent</div>
+              <label style="display:flex; gap:10px; align-items:flex-start;">
+                <input id="consent" type="checkbox" style="margin-top: 3px;" />
+                <span class="muted">I agree that my solution and my responses may be recorded.</span>
+              </label>
+            </div>
+
+            <div class="cta-row" style="justify-content: flex-end;">
+              <button class="btn btn-primary" id="btn-start" type="button" disabled>Start OA</button>
+            </div>
+          </div>
+        </div>
       </main>
+
+      <div class="modal" id="skip-modal" hidden>
+        <div class="modal-backdrop" data-close="1"></div>
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="skip-modal-title">
+          <button class="modal-close" id="btn-skip-x" type="button" aria-label="Close">×</button>
+          <div class="modal-title" id="skip-modal-title">Skip conversational survey?</div>
+          <div class="modal-text">
+            If you skip the conversational survey, you won’t be able to see your OA feedback afterwards.
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" id="btn-skip-cancel" type="button">Go back</button>
+            <button class="btn btn-primary" id="btn-skip-confirm" type="button">Skip anyway</button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
-
-    <script src="./app.js"></script>
+    <script src="./start.js"></script>
   </body>
 </html>

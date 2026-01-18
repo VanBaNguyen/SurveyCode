@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SurveyCode</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <link rel="stylesheet" href="./styles.css" />
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-text">
+            <div class="brand-title">SurveyCode</div>
+            <div class="brand-subtitle">Candidate view</div>
+          </div>
+        </div>
+
+        <div class="topbar-center">
+          <div class="status-chip status-timer" id="timer" aria-label="Timer">45:00</div>
+        </div>
+
+        <div class="topbar-actions"></div>
+      </header>
+
+      <main class="main main-wide" id="main">
+        <section class="workspace" data-screen="coding">
+          <aside class="left">
+            <div class="problem-header">
+              <div class="problem-meta">
+                <div class="problem-title" id="problem-title">Two Sum</div>
+                <div class="problem-tags">
+                  <span class="tag">Array</span>
+                  <span class="tag">Hash Map</span>
+                  <span class="tag">Easy</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="tabs">
+              <button class="tab is-active" type="button" data-tab="description">Description</button>
+              <button class="tab" type="button" data-tab="examples">Examples</button>
+              <button class="tab" type="button" data-tab="constraints">Constraints</button>
+            </div>
+
+            <div class="problem" id="problem">
+              <div class="tab-panel" data-panel="description"></div>
+              <div class="tab-panel" data-panel="examples" hidden></div>
+              <div class="tab-panel" data-panel="constraints" hidden></div>
+            </div>
+          </aside>
+
+          <section class="right">
+            <div class="editor-wrap">
+              <textarea id="editor" aria-label="Code editor"></textarea>
+            </div>
+
+            <div class="actionbar">
+              <div class="actionbar-left">
+                <div class="lang">
+                  <select id="language" class="select">
+                    <option value="python">Python</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="java">Java</option>
+                    <option value="cpp">C++</option>
+                  </select>
+                </div>
+
+                <div class="save-status" id="save-status"></div>
+              </div>
+
+              <div class="actionbar-right">
+                <button class="btn btn-secondary" id="btn-save" type="button">Save</button>
+                <button class="btn btn-primary" id="btn-submit" type="button">Submit</button>
+              </div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
