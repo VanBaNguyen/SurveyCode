@@ -61,20 +61,6 @@ python app.py
 
 The backend will run on `http://localhost:5001`
 
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-```bash
-cd frontend
-```
-
-2. Open `index.html` in a web browser or use a local server:
-```bash
-python -m http.server 8000
-```
-
-3. Access the application at `http://localhost:8000`
-
 ## Usage
 
 1. Start on the landing page and accept the consent agreement
