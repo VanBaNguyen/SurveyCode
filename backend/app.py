@@ -49,7 +49,7 @@ class InterviewSession:
         self.code_review = None
         self.last_speech_time = time.time()
         self.is_speaking = False
-        self.silence_threshold = 0.6  # seconds of silence to auto-submit
+        self.silence_threshold = 0.2  # seconds of silence to auto-submit
         self.min_answer_length = 10
         self.answer_submitted = False  # Prevent duplicate submissions
         
@@ -81,11 +81,11 @@ class InterviewSession:
             response = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a warm, enthusiastic interviewer. Give a brief, positive 1-2 sentence reaction that specifically references what they just said. Be encouraging, show genuine interest, and acknowledge specific details they mentioned. Keep it natural and conversational, under 20 words. DO NOT ask any questions or follow-ups. Only provide acknowledgment and encouragement."},
+                    {"role": "system", "content": "You are a warm, friendly interviewer. Give a brief, positive acknowledgment in 1 sentence. Be encouraging and supportive but keep it general and vague. Don't reference specific details from their answer. Keep it under 12 words. DO NOT ask any questions or follow-ups."},
                     {"role": "user", "content": f"They said: {answer}"}
                 ],
-                max_tokens=40,
-                temperature=0.8
+                max_tokens=25,
+                temperature=0.7
             )
             return response.choices[0].message.content.strip()
         except Exception as e:

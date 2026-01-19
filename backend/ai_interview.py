@@ -54,7 +54,7 @@ class AIInterviewer:
         self.RATE = 16000
         
         # Silence detection settings
-        self.SILENCE_THRESHOLD = 0.8  # seconds of silence to consider answer complete
+        self.SILENCE_THRESHOLD = 0.2  # seconds of silence to consider answer complete
         self.MIN_ANSWER_LENGTH = 10  # minimum characters for a valid answer
         self.last_speech_time = time.time()
         
@@ -97,11 +97,11 @@ class AIInterviewer:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a warm, enthusiastic interviewer. Give a brief, positive 1-2 sentence reaction that specifically references what they just said. Be encouraging, show genuine interest, and acknowledge specific details they mentioned. Keep it natural and conversational, under 20 words. DO NOT ask any questions or follow-ups. Only provide acknowledgment and encouragement."},
+                    {"role": "system", "content": "You are a warm, friendly interviewer. Give a brief, positive acknowledgment in 1 sentence. Be encouraging and supportive but keep it general and vague. Don't reference specific details from their answer. Keep it under 12 words. DO NOT ask any questions or follow-ups."},
                     {"role": "user", "content": f"They said: {answer}"}
                 ],
-                max_tokens=40,
-                temperature=0.8
+                max_tokens=25,
+                temperature=0.7
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
@@ -327,7 +327,7 @@ class AIInterviewer:
         print("\nInstructions:")
         print("- The AI will ask you questions")
         print("- Speak your answer clearly")
-        print("- System detects when you're done (0.8s silence)")
+        print("- System detects when you're done (0.2s silence)")
         print("- Minimum 10 characters for valid answer")
         print("- Press Ctrl+C to stop anytime\n")
         print("=" * 60)
