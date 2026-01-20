@@ -168,12 +168,22 @@ def generate_tts(text):
 
 @app.route('/')
 def index():
-    return send_from_directory('../frontend', 'index.html')
+    return send_from_directory('../frontend/src/pages', 'index.html')
 
 
 @app.route('/<path:path>')
 def serve_static(path):
-    return send_from_directory('../frontend', path)
+    # Serve pages from src/pages
+    if path.endswith('.html'):
+        return send_from_directory('../frontend/src/pages', path)
+    # Serve scripts from src/scripts
+    elif path.endswith('.js'):
+        return send_from_directory('../frontend/src/scripts', path)
+    # Serve styles from src/styles
+    elif path.endswith('.css'):
+        return send_from_directory('../frontend/src/styles', path)
+    # Default fallback
+    return send_from_directory('../frontend/src', path)
 
 
 @app.route('/api/start', methods=['POST'])
